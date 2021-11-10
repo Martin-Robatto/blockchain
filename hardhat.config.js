@@ -21,6 +21,6 @@ module.exports = {
         url:      process.env.RINKEBY_URL,
         accounts: [process.env.PRIVATE_KEY_R],
         from:     process.env.ACCOUNT_ADDRESS_R
-    }
+      }
   }
 };
