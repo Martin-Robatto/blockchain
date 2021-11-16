@@ -1,19 +1,12 @@
 //SPDX-License-Identifier: MIT
 pragma solidity 0.8.4;
 
-contract SmartInvestment {
+import "./Domain.sol";
+import "./InvestmentProposal.sol";
 
-    struct maker {
-        string name;
-        string country;
-        string passport;
-    }
+contract SmartInvestment is Domain {
 
-    struct investmentProposal {
-        string name;
-        string description;
-        uint256 minRequiredInvestment;
-    }
+    bool public pause;
 
     mapping(address => uint256) public users;
     mapping(address => maker) public makersAttributes;
@@ -22,7 +15,6 @@ contract SmartInvestment {
     mapping(address => investmentProposal) public proposals;
     uint256 proposalsAmount;
     uint256 period;
-    bool public pause;
 
     modifier onlyOwners() {
 		require(users[msg.sender] == 1, "Not authorized");
@@ -70,21 +62,23 @@ contract SmartInvestment {
         _;
     }
 
-    constructor() {
-        users[msg.sender] = 1;
-        period = 0;
+    modifier isCorrect(address _address) {
+        require(_address != address(0), "Address is the zero address");
+        _;
     }
 
-    function addOwner(address _newValue) external onlyOwners() pausable() {
+    constructor() { }
+
+    function addOwner(address _newValue) external onlyOwners() isCorrect(_newValue) pausable() {
         users[_newValue] = 1;
     }
 
-    function addAuditor(address _newValue) external onlyOwners() pausable() {
+    function addAuditor(address _newValue) external onlyOwners() isCorrect(_newValue) pausable() {
         users[_newValue] = 3;
         auditorsAmount = auditorsAmount + 1;
     }
 
-    function addMaker(address _newValue, string calldata _name, string calldata _country, string calldata _passport) external onlyOwners() pausable() {
+    function addMaker(address _newValue, string calldata _name, string calldata _country, string calldata _passport) external onlyOwners() isCorrect(_newValue) pausable() {
         maker memory newMaker = maker(_name, _country, _passport);
         users[_newValue] = 2;
         makersAttributes[_newValue] = newMaker;
@@ -95,6 +89,7 @@ contract SmartInvestment {
         investmentProposal memory newInvestmentProposal = investmentProposal(_name, _description, _minRequiredInvestment);
         proposals[msg.sender] = newInvestmentProposal;
         proposalsAmount = proposalsAmount + 1;
+        InvestmentProposal proposal = new InvestmentProposal();
     }
 
     function openSubmissionPeriod() external onlyOwners() onlyNeutralPeriod() pausable() {
@@ -107,10 +102,6 @@ contract SmartInvestment {
 
     function openNeutralPeriod() external onlyOwners() onlyVotingPeriod() pausable() {
         period = 0;
-    }
-
-    function setPause(bool _newValue) external onlyOwners() {
-		pause = _newValue;
     }
 
     function withdraw(uint256 _amount) external onlyOwners() hasEnoughBalance(_amount) pausable() {
