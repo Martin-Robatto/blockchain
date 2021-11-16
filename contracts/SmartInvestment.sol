@@ -11,10 +11,13 @@ contract SmartInvestment is Domain {
     mapping(address => uint256) public users;
     mapping(address => maker) public makersAttributes;
     mapping(address => proposal) public proposalsAttributes;
+    mapping(uint256 => address) public proposals;
     uint256 makersAmount;
     uint256 auditorsAmount;
     uint256 proposalsAmount;
     uint256 period;
+    uint256 totalBalance;
+    uint256 athorizationForClosingVotingPeriod;
 
     modifier onlyOwners() {
 		require(users[msg.sender] == 1, "Not authorized");
@@ -82,6 +85,12 @@ contract SmartInvestment is Domain {
         _;
     }
 
+    modifier requirementsForClosingPeriodFullfilled() {
+        require(totalBalance >= 50, "Total balance is not enough");
+        require(athorizationForClosingVotingPeriod >= 2, "Not enough authorizations for closing voting period");
+        _;
+    }
+
     constructor() { }
 
     function addOwner(address _newValue) external onlyOwners() isCorrect(_newValue) pausable() {
@@ -101,19 +110,38 @@ contract SmartInvestment is Domain {
     }
 
     function addInvestmentProposal(string calldata _name, string calldata _description, uint256 _minRequiredInvestment) external onlyMakers() onlySubmissionPeriod() pausable() {
-        proposal memory newProposal = proposal(msg.sender,_name, _description, _minRequiredInvestment,0, false);
+        
+        proposal memory newProposal = proposal(msg.sender, _name, _description, _minRequiredInvestment,0, false);
         InvestmentProposal newInvestmentProposal = new InvestmentProposal();
         proposalsAttributes[address(newInvestmentProposal)] = newProposal;
+        proposals[proposalsAmount] = address(newInvestmentProposal);
         proposalsAmount = proposalsAmount + 1;
     }
 
     function voteForProposal(address _address) external payable hasEnoughAmount(msg.value) onlyVotingPeriod() isVerified(_address) pausable() {
         proposalsAttributes[_address].totalVotes += 1;
         payable(_address).transfer(msg.value);
+        totalBalance += msg.value;
     }
     
+    function getProposalWithMostVotes() external onlyAuditors() onlyVotingPeriod() pausable() view returns (address) {
+        uint256 max = 0;
+        uint256 index = 0;
+        for (uint256 i = 0; i < proposalsAmount; i++) {
+            if (proposalsAttributes[proposals[i]].totalVotes > max) {
+                max = proposalsAttributes[proposals[i]].totalVotes;
+                index = i;
+            }
+        }
+        return proposals[index];
+    }
+
     function verifyProposal(address _address) external onlyAuditors() pausable() {
         proposalsAttributes[_address].verified = true;
+    }
+
+    function authorizeClosingPeriod() external onlyAuditors() onlyVotingPeriod() pausable() {
+        athorizationForClosingVotingPeriod = athorizationForClosingVotingPeriod + 1;
     }
 
     function openSubmissionPeriod() external onlyOwners() onlyNeutralPeriod() pausable() {
@@ -124,8 +152,9 @@ contract SmartInvestment is Domain {
         period = 2;
     }
 
-    function openNeutralPeriod() external onlyOwners() onlyVotingPeriod() pausable() {
+    function openNeutralPeriod() external onlyOwners() onlyVotingPeriod() requirementsForClosingPeriodFullfilled() pausable() {
         period = 0;
+        //se reinician los valores? o que hacemos?
     }
 
     function withdraw(uint256 _amount) external onlyOwners() hasEnoughBalance(_amount) pausable() {
