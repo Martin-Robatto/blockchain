@@ -10,9 +10,9 @@ contract SmartInvestment is Domain {
 
     mapping(address => uint256) public users;
     mapping(address => maker) public makersAttributes;
+    mapping(address => uint256) public proposals;
     uint256 makersAmount;
     uint256 auditorsAmount;
-    mapping(address => investmentProposal) public proposals;
     uint256 proposalsAmount;
     uint256 period;
 
@@ -67,6 +67,11 @@ contract SmartInvestment is Domain {
         _;
     }
 
+    modifier hasEnoughAmount(uint256 amount) {
+        require (amount >= 5, "Not enough amount to vote");
+        _;
+    }
+
     constructor() { }
 
     function addOwner(address _newValue) external onlyOwners() isCorrect(_newValue) pausable() {
@@ -86,10 +91,14 @@ contract SmartInvestment is Domain {
     }
 
     function addInvestmentProposal(string calldata _name, string calldata _description, uint256 _minRequiredInvestment) external onlyMakers() onlySubmissionPeriod() pausable() {
-        investmentProposal memory newInvestmentProposal = investmentProposal(_name, _description, _minRequiredInvestment);
-        proposals[msg.sender] = newInvestmentProposal;
+        InvestmentProposal proposal = new InvestmentProposal(msg.sender, _name, _description, _minRequiredInvestment);
         proposalsAmount = proposalsAmount + 1;
-        InvestmentProposal proposal = new InvestmentProposal();
+        proposals[address(proposal)] = 0;
+    }
+
+    function voteForProposal(address _address) external payable hasEnoughAmount(msg.value) onlyVotingPeriod() pausable() {
+        proposals[_address] += 1;
+        payable(_address).transfer(msg.value);
     }
 
     function openSubmissionPeriod() external onlyOwners() onlyNeutralPeriod() pausable() {

@@ -1,22 +1,18 @@
 //SPDX-License-Identifier: MIT
 pragma solidity 0.8.4;
 
-contract InvestmentProposal {
+import "./Domain.sol";
+
+contract InvestmentProposal is Domain {
 
     address public owner;
     bool public pause;
-
-    uint256 public votesAmount;
+    proposal public investmentProposal;
 
     modifier onlyOwner() {
 		require(msg.sender == owner, "Not authorized");
 		_;
 	}
-
-    modifier hasEnoughAmount(uint256 amount) {
-        require (amount >= 5, "Not enough amount to vote");
-        _;
-    }
 
     modifier pausable() {
 		require(!pause, "Contract is in Pause");
@@ -33,17 +29,14 @@ contract InvestmentProposal {
         _;
     }
 
-    constructor() {
+    constructor(address _address, string memory _name, string memory _description, uint256 _minRequiredInvestment) {
+        proposal memory newInvestmentProposal = proposal(_address, _name, _description, _minRequiredInvestment);
+        investmentProposal = newInvestmentProposal;
         owner = msg.sender;
-        votesAmount = 0;
     }
 
     function setOwner(address _newValue) external onlyOwner() isCorrect(_newValue) pausable() {
         owner = _newValue;
-    }
-
-    function voteForProposal() external payable hasEnoughAmount(msg.value) pausable() {
-        votesAmount = votesAmount + 1;
     }
 
     function setPause(bool _newValue) external onlyOwner() {

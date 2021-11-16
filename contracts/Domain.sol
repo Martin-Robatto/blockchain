@@ -9,7 +9,8 @@ contract Domain {
         string passport;
     }
 
-    struct investmentProposal {
+    struct proposal {
+        address maker;
         string name;
         string description;
         uint256 minRequiredInvestment;
