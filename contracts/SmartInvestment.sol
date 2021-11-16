@@ -10,7 +10,7 @@ contract SmartInvestment is Domain {
 
     mapping(address => uint256) public users;
     mapping(address => maker) public makersAttributes;
-    mapping(address => uint256) public proposals;
+    mapping(address => proposal) public proposalsAttributes;
     uint256 makersAmount;
     uint256 auditorsAmount;
     uint256 proposalsAmount;
@@ -23,6 +23,11 @@ contract SmartInvestment is Domain {
 
     modifier onlyMakers() {
 		require(users[msg.sender] == 2, "Not authorized");
+		_;
+	}
+    
+    modifier onlyAuditors() {
+		require(users[msg.sender] == 3, "Not authorized");
 		_;
 	}
 
@@ -72,6 +77,11 @@ contract SmartInvestment is Domain {
         _;
     }
 
+    modifier isVerified(address _address) {
+        require(proposalsAttributes[_address].verified, "Proposal is not verified");
+        _;
+    }
+
     constructor() { }
 
     function addOwner(address _newValue) external onlyOwners() isCorrect(_newValue) pausable() {
@@ -91,14 +101,19 @@ contract SmartInvestment is Domain {
     }
 
     function addInvestmentProposal(string calldata _name, string calldata _description, uint256 _minRequiredInvestment) external onlyMakers() onlySubmissionPeriod() pausable() {
-        InvestmentProposal proposal = new InvestmentProposal(msg.sender, _name, _description, _minRequiredInvestment);
+        proposal memory newProposal = proposal(msg.sender,_name, _description, _minRequiredInvestment,0, false);
+        InvestmentProposal newInvestmentProposal = new InvestmentProposal();
+        proposalsAttributes[address(newInvestmentProposal)] = newProposal;
         proposalsAmount = proposalsAmount + 1;
-        proposals[address(proposal)] = 0;
     }
 
-    function voteForProposal(address _address) external payable hasEnoughAmount(msg.value) onlyVotingPeriod() pausable() {
-        proposals[_address] += 1;
+    function voteForProposal(address _address) external payable hasEnoughAmount(msg.value) onlyVotingPeriod() isVerified(_address) pausable() {
+        proposalsAttributes[_address].totalVotes += 1;
         payable(_address).transfer(msg.value);
+    }
+    
+    function verifyProposal(address _address) external onlyAuditors() pausable() {
+        proposalsAttributes[_address].verified = true;
     }
 
     function openSubmissionPeriod() external onlyOwners() onlyNeutralPeriod() pausable() {
@@ -116,6 +131,8 @@ contract SmartInvestment is Domain {
     function withdraw(uint256 _amount) external onlyOwners() hasEnoughBalance(_amount) pausable() {
         payable(msg.sender).transfer(_amount);
     }
+    
+
 
     receive() external payable { }
 

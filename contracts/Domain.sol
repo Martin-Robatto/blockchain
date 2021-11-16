@@ -14,6 +14,8 @@ contract Domain {
         string name;
         string description;
         uint256 minRequiredInvestment;
+        uint256 totalVotes;
+        bool verified;
     }
 
 }

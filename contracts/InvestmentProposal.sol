@@ -7,7 +7,6 @@ contract InvestmentProposal is Domain {
 
     address public owner;
     bool public pause;
-    proposal public investmentProposal;
 
     modifier onlyOwner() {
 		require(msg.sender == owner, "Not authorized");
@@ -29,9 +28,7 @@ contract InvestmentProposal is Domain {
         _;
     }
 
-    constructor(address _address, string memory _name, string memory _description, uint256 _minRequiredInvestment) {
-        proposal memory newInvestmentProposal = proposal(_address, _name, _description, _minRequiredInvestment);
-        investmentProposal = newInvestmentProposal;
+    constructor() {
         owner = msg.sender;
     }
 
