@@ -3,26 +3,9 @@ pragma solidity 0.8.4;
 
 import "./Domain.sol";
 import "./InvestmentProposal.sol";
+import "./Proxy.sol";
 
-contract SmartInvestment is Domain {
-
-    bool public pause;
-
-    mapping(address => uint256) public users;
-    mapping(address => maker) public makersAttributes;
-    mapping(address => proposal) public proposalsAttributes;
-    mapping(uint256 => address) public proposals;
-    uint256 makersAmount;
-    uint256 auditorsAmount;
-    uint256 proposalsAmount;
-    uint256 period;
-    uint256 totalBalance;
-    uint256 athorizationForClosingVotingPeriod;
-
-    modifier onlyOwners() {
-		require(users[msg.sender] == 1, "Not authorized");
-		_;
-	}
+contract SmartInvestment is Domain, Proxy {
 
     modifier onlyMakers() {
 		require(users[msg.sender] == 2, "Not authorized");
@@ -57,16 +40,6 @@ contract SmartInvestment is Domain {
 
     modifier hasEnoughInvestmentProposal() {
         require(proposalsAmount >= 2, "Not enough investment proposals");
-        _;
-    }
-
-    modifier pausable() {
-		require(!pause, "Contract is in Pause");
-		_;
-	}
-
-    modifier hasEnoughBalance(uint256 _amount) {
-        require(_amount <= address(this).balance, "Not enough balance");
         _;
     }
 
@@ -110,9 +83,8 @@ contract SmartInvestment is Domain {
     }
 
     function addInvestmentProposal(string calldata _name, string calldata _description, uint256 _minRequiredInvestment) external onlyMakers() onlySubmissionPeriod() pausable() {
-        
-        proposal memory newProposal = proposal(msg.sender, _name, _description, _minRequiredInvestment,0, false);
         InvestmentProposal newInvestmentProposal = new InvestmentProposal();
+        proposal memory newProposal = proposal(msg.sender,address(newInvestmentProposal), _name, _description, _minRequiredInvestment,0, false);
         proposalsAttributes[address(newInvestmentProposal)] = newProposal;
         proposals[proposalsAmount] = address(newInvestmentProposal);
         proposalsAmount = proposalsAmount + 1;
@@ -133,7 +105,7 @@ contract SmartInvestment is Domain {
                 index = i;
             }
         }
-        return proposals[index];
+        return proposalsAttributes[proposals[index]].proposal;
     }
 
     function verifyProposal(address _address) external onlyAuditors() pausable() {
@@ -156,15 +128,4 @@ contract SmartInvestment is Domain {
         period = 0;
         //se reinician los valores? o que hacemos?
     }
-
-    function withdraw(uint256 _amount) external onlyOwners() hasEnoughBalance(_amount) pausable() {
-        payable(msg.sender).transfer(_amount);
-    }
-    
-
-
-    receive() external payable { }
-
-    fallback() external payable { }
-
 }

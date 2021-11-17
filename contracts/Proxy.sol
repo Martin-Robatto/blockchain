@@ -5,20 +5,19 @@ import "./Domain.sol";
 
 contract Proxy is Domain {
 
-    /*bytes32 private constant implementationPosition = bytes32(uint256(
-        keccak256('eip1967.proxy.implementation')) - 1
-    ));*/
-
     address public implementation;
     bool public pause;
 
     mapping(address => uint256) public users;
     mapping(address => maker) public makersAttributes;
+    mapping(address => proposal) public proposalsAttributes;
+    mapping(uint256 => address) public proposals;
     uint256 makersAmount;
     uint256 auditorsAmount;
-    mapping(address => investmentProposal) public proposals;
     uint256 proposalsAmount;
     uint256 period;
+    uint256 totalBalance;
+    uint256 athorizationForClosingVotingPeriod;
     
     modifier onlyOwners() {
 		require(users[msg.sender] == 1, "Not authorized");

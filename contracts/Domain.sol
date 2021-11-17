@@ -11,6 +11,7 @@ contract Domain {
 
     struct proposal {
         address maker;
+        address proposal;
         string name;
         string description;
         uint256 minRequiredInvestment;
