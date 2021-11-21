@@ -1,6 +1,8 @@
 //SPDX-License-Identifier: MIT
 pragma solidity 0.8.4;
 
+import "./InvestmentProposal.sol";
+
 contract Domain {
 
     struct maker {
@@ -11,7 +13,7 @@ contract Domain {
 
     struct proposal {
         address maker;
-        address proposal;
+        InvestmentProposal instance;
         string name;
         string description;
         uint256 minRequiredInvestment;

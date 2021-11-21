@@ -1,9 +1,7 @@
 //SPDX-License-Identifier: MIT
 pragma solidity 0.8.4;
 
-import "./Domain.sol";
-
-contract InvestmentProposal is Domain {
+contract InvestmentProposal {
 
     address public owner;
     bool public pause;
@@ -40,8 +38,8 @@ contract InvestmentProposal is Domain {
 		pause = _newValue;
     }
 
-    function withdraw(uint256 _amount) external onlyOwner() hasEnoughBalance(_amount) pausable() {
-        payable(msg.sender).transfer(_amount);
+    function withdraw(address _address, uint256 _amount) external onlyOwner() hasEnoughBalance(_amount) pausable() {
+        payable(_address).transfer(_amount);
     }
 
     receive() external payable { }

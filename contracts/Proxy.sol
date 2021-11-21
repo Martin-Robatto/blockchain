@@ -6,21 +6,24 @@ import "./Domain.sol";
 contract Proxy is Domain {
 
     address public implementation;
+    address public myAddress;
     bool public pause;
 
-    mapping(address => uint256) public users;
+    mapping(address => uint256) public userRoles;
     mapping(address => maker) public makersAttributes;
-    mapping(address => proposal) public proposalsAttributes;
     mapping(uint256 => address) public proposals;
+    mapping(address => proposal) public proposalsAttributes;
+
     uint256 makersAmount;
     uint256 auditorsAmount;
     uint256 proposalsAmount;
-    uint256 period;
-    uint256 totalBalance;
-    uint256 athorizationForClosingVotingPeriod;
+    uint256 proposalsTotalBalance;
+
+    uint256 actualPeriod;
+    uint256 closeVotingPeriodVotes;
     
     modifier onlyOwners() {
-		require(users[msg.sender] == 1, "Not authorized");
+		require(userRoles[msg.sender] == 1, "Not authorized");
 		_;
 	}
 
@@ -37,7 +40,8 @@ contract Proxy is Domain {
     event Upgraded(address indexed implementation); 
 
     constructor() {
-        users[msg.sender] = 1;
+        userRoles[msg.sender] = 1;
+        myAddress = address(this);
     }
 
     function setImplementation(address _implementation) external onlyOwners() pausable() {
