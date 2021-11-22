@@ -46,7 +46,7 @@ contract InvestmentProposal {
 
     fallback() external payable { }
 
-    function destroyContract() external {
+    function destroyContract() external onlyOwner() pausable() {
         selfdestruct(payable(owner));
     }
 

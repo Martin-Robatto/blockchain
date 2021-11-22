@@ -14,13 +14,13 @@ contract Proxy is Domain {
     mapping(uint256 => address) public proposals;
     mapping(address => proposal) public proposalsAttributes;
 
-    uint256 makersAmount;
-    uint256 auditorsAmount;
-    uint256 proposalsAmount;
-    uint256 proposalsTotalBalance;
+    uint256 public makersAmount;
+    uint256 public auditorsAmount;
+    uint256 public proposalsAmount;
+    uint256 public proposalsTotalBalance;
 
-    uint256 actualPeriod;
-    uint256 closeVotingPeriodVotes;
+    uint256 public actualPeriod;
+    uint256 public closeVotingPeriodVotes;
     
     modifier onlyOwners() {
 		require(userRoles[msg.sender] == 1, "Not authorized");
@@ -39,7 +39,7 @@ contract Proxy is Domain {
 
     event Upgraded(address indexed implementation); 
 
-    constructor() {
+    constructor() payable {
         userRoles[msg.sender] = 1;
         myAddress = address(this);
     }

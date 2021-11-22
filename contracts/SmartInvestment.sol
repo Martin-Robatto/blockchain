@@ -49,7 +49,7 @@ contract SmartInvestment is Proxy {
     }
 
     modifier hasEnoughAmount(uint256 amount) {
-        require (amount >= 5, "Not enough amount to vote");
+        require (amount >= 5000000000000000000, "Not enough amount to vote");
         _;
     }
 
@@ -59,7 +59,7 @@ contract SmartInvestment is Proxy {
     }
 
     modifier requirementsForClosingPeriodFullfilled() {
-        require(proposalsTotalBalance >= 50, "Total balance is not enough");
+        require(proposalsTotalBalance >= 50000000000000000000, "Total balance is not enough");
         require(closeVotingPeriodVotes >= 2, "Not enough authorizations for closing voting period");
         _;
     }
@@ -104,11 +104,11 @@ contract SmartInvestment is Proxy {
         closeVotingPeriodVotes++;
     }
 
-    function openSubmissionPeriod() external onlyOwners() onlyNeutralPeriod() pausable() {
+    function openSubmissionPeriod() external onlyOwners() hasEnoughWorkers() onlyNeutralPeriod() pausable() {
         actualPeriod = 1;
     }
 
-    function openVotingPeriod() external onlyOwners() onlySubmissionPeriod() hasEnoughInvestmentProposal() pausable() {
+    function openVotingPeriod() external onlyOwners() hasEnoughWorkers() hasEnoughInvestmentProposal() onlySubmissionPeriod() pausable() {
         actualPeriod = 2;
     }
 
@@ -121,7 +121,7 @@ contract SmartInvestment is Proxy {
 
     function getWinnerProposal() internal pausable() view returns (address) {
         address tempWinner = proposals[0];
-        for (uint256 i = 0; i < proposalsAmount - 1; i++) {
+        for (uint256 i = 0; i < proposalsAmount; i++) {
             if (proposals[i].balance > tempWinner.balance) {
                 tempWinner = proposals[i];
             }
@@ -137,7 +137,7 @@ contract SmartInvestment is Proxy {
     event Winner(string indexed name, address indexed maker, uint256 minRequiredInvestment); 
 
     function finalOperations(address _winner) internal pausable() {
-        for (uint256 i = 0; i < proposalsAmount - 1; i++) {
+        for (uint256 i = 0; i < proposalsAmount; i++) {
             takeCut(proposals[i]);
             proposal memory attributes = proposalsAttributes[proposals[i]];
             if (proposals[i] != _winner) {
