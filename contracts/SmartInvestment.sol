@@ -1,7 +1,6 @@
 //SPDX-License-Identifier: MIT
 pragma solidity 0.8.4;
 
-import "./Domain.sol";
 import "./InvestmentProposal.sol";
 import "./Proxy.sol";
 
@@ -40,11 +39,6 @@ contract SmartInvestment is Proxy {
 
     modifier hasEnoughInvestmentProposal() {
         require(proposalsAmount >= 2, "Not enough investment proposals");
-        _;
-    }
-
-    modifier isCorrect(address _address) {
-        require(_address != address(0), "Address is the zero address");
         _;
     }
 
@@ -137,24 +131,28 @@ contract SmartInvestment is Proxy {
     event Winner(string indexed name, address indexed maker, uint256 minRequiredInvestment); 
 
     function finalOperations(address _winner) internal pausable() {
-        for (uint256 i = 0; i < proposalsAmount; i++) {
-            takeCut(proposals[i]);
-            proposal memory attributes = proposalsAttributes[proposals[i]];
+        proposal memory winnerAttributes = proposalsAttributes[_winner];
+        uint256 winnerIndex;
+        takeCut(winnerAttributes.instance);
+        for (uint256 i = 0; i < proposalsAmount - 1; i++) {
             if (proposals[i] != _winner) {
+                proposal memory attributes = proposalsAttributes[proposals[i]];
+                takeCut(attributes.instance);
                 attributes.instance.withdraw(_winner, proposals[i].balance);
                 attributes.instance.destroyContract();
+                delete proposalsAttributes[proposals[i]];
+                delete proposals[i];
+            }else{
+                winnerIndex = i;
             }
-            else {
-                attributes.instance.setOwner(attributes.maker);
-            }
-            delete proposalsAttributes[proposals[i]];
-            delete proposals[i];
         }
+        winnerAttributes.instance.setOwner(winnerAttributes.maker);
+        delete proposalsAttributes[_winner];
+        delete proposals[winnerIndex];
     }
 
-    function takeCut(address _address) internal pausable() {
-        InvestmentProposal proposal = proposalsAttributes[_address].instance;
-        uint256 cut = _address.balance / 10;
-        proposal.withdraw(myAddress, cut);
+    function takeCut(InvestmentProposal _proposal) internal pausable() {
+        uint256 cut = address(_proposal).balance / 10;
+        _proposal.withdraw(myAddress, cut);
     }
 }

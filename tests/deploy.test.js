@@ -3,7 +3,6 @@ const { ethers } = require("hardhat");
 
 let contractInstance;
 
-// se ejecuta antes que todos los test
 before(async function() { 
     console.log("deploy process started");
 	const deployer = await ethers.getSigner();

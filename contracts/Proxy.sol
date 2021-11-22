@@ -37,6 +37,11 @@ contract Proxy is Domain {
         _;
     }
 
+    modifier isCorrect(address _address) {
+        require(_address != address(0), "Address is the zero address");
+        _;
+    }
+
     event Upgraded(address indexed implementation); 
 
     constructor() payable {
@@ -44,7 +49,7 @@ contract Proxy is Domain {
         myAddress = address(this);
     }
 
-    function setImplementation(address _implementation) external onlyOwners() pausable() {
+    function setImplementation(address _implementation) external onlyOwners() isCorrect(_implementation) pausable() {
         implementation = _implementation;
         emit Upgraded(_implementation);
     }
