@@ -16,6 +16,17 @@ contract SmartInvestment is Proxy {
 		_;
 	}
 
+    modifier onlyNewAuditors() {
+        require(closeVotingPeriodVotes[0] != msg.sender, "The auditor has already authorized");
+        require(closeVotingPeriodVotes[1] != msg.sender, "The auditor has already authorized");
+        _;
+    }
+
+    modifier onlyVoters() {
+        require(userRoles[msg.sender] == 0, "Not authorized");
+		_;
+	}
+
     modifier hasEnoughWorkers() {
         require(makersAmount >= 3, "Not enough makers");
         require(auditorsAmount >= 2, "Not enough auditors");
@@ -42,8 +53,8 @@ contract SmartInvestment is Proxy {
         _;
     }
 
-    modifier hasEnoughAmount(uint256 amount) {
-        require (amount >= 5000000000000000000, "Not enough amount to vote");
+    modifier hasEnoughAmountToVote(uint256 _amount) {
+        require (_amount >= 5*1e18, "Not enough amount to vote");
         _;
     }
 
@@ -52,97 +63,101 @@ contract SmartInvestment is Proxy {
         _;
     }
 
-    modifier requirementsForClosingPeriodFullfilled() {
-        require(proposalsTotalBalance >= 50000000000000000000, "Total balance is not enough");
-        require(closeVotingPeriodVotes >= 2, "Not enough authorizations for closing voting period");
+    modifier hasEnoughAuthorizations() {
+        require(proposalsTotalBalance >= 50*1e18, "Total balance is not enough");
+        require(closeVotingPeriodVotesAmount >= 2, "Not enough authorizations for closing voting period");
         _;
     }
 
-    constructor() { }
-
-    function addOwner(address _newValue) external onlyOwners() isCorrect(_newValue) pausable() {
-        userRoles[_newValue] = 1;
+    modifier alreadyAuthorized() {
+        require(closeVotingPeriodVotesAmount < 2, "There are enough authorizations for closing voting period");
+        _;
     }
 
-    function addMaker(address _newValue, string calldata _name, string calldata _country, string calldata _passport) external onlyOwners() isCorrect(_newValue) pausable() {
+    event Winner(string indexed _name, address indexed _maker, uint256 _minRequiredInvestment); 
+
+    constructor() { }
+
+    function addOwner(address _address) external pausable() onlyOwners() isValid(_address) {
+        userRoles[_address] = 1;
+    }
+
+    function addMaker(address _address, string calldata _name, string calldata _country, string calldata _passport) external pausable() onlyOwners() isValid(_address) {
         maker memory newMaker = maker(_name, _country, _passport);
-        userRoles[_newValue] = 2;
-        makersAttributes[_newValue] = newMaker;
+        userRoles[_address] = 2;
+        makersAttributes[_address] = newMaker;
         makersAmount++;
     }
 
-    function addAuditor(address _newValue) external onlyOwners() isCorrect(_newValue) pausable() {
-        userRoles[_newValue] = 3;
+    function addAuditor(address _address) external pausable() onlyOwners() isValid(_address) {
+        userRoles[_address] = 3;
         auditorsAmount++;
     }
 
-    function addInvestmentProposal(string calldata _name, string calldata _description, uint256 _minRequiredInvestment) external onlyMakers() onlySubmissionPeriod() pausable() {
+    function addInvestmentProposal(string calldata _name, string calldata _description, uint256 _minRequiredInvestment) external pausable() onlyMakers() onlySubmissionPeriod() {
         InvestmentProposal newInvestmentProposal = new InvestmentProposal();
         proposal memory newProposal = proposal(msg.sender, newInvestmentProposal, _name, _description, _minRequiredInvestment, 0, false);
-        proposalsAttributes[address(newInvestmentProposal)] = newProposal;
         proposals[proposalsAmount] = address(newInvestmentProposal);
+        proposalsAttributes[address(newInvestmentProposal)] = newProposal;
         proposalsAmount++;
     }
 
-    function voteForProposal(address _address) external payable hasEnoughAmount(msg.value) onlyVotingPeriod() isVerified(_address) pausable() {
+    function voteForProposal(address _address) external payable pausable() onlyVotingPeriod() onlyVoters() isVerified(_address) hasEnoughAmountToVote(msg.value) {
         proposalsAttributes[_address].totalVotes += 1;
         payable(_address).transfer(msg.value);
         proposalsTotalBalance += msg.value;
     }
 
-    function verifyProposal(address _address) external onlyAuditors() pausable() {
+    function verifyProposal(address _address) external pausable() onlyAuditors() {
         proposalsAttributes[_address].verified = true;
     }
 
-    function authorizeClosingPeriod() external onlyAuditors() onlyVotingPeriod() pausable() {
-        closeVotingPeriodVotes++;
+    function authorizeClosingPeriod() external pausable() onlyVotingPeriod() onlyAuditors() onlyNewAuditors() alreadyAuthorized() {
+            closeVotingPeriodVotes[closeVotingPeriodVotesAmount] = msg.sender;
+            closeVotingPeriodVotesAmount++;
     }
 
-    function openSubmissionPeriod() external onlyOwners() hasEnoughWorkers() onlyNeutralPeriod() pausable() {
+    function openSubmissionPeriod() external pausable() onlyNeutralPeriod() onlyOwners() hasEnoughWorkers() {
         actualPeriod = 1;
     }
 
-    function openVotingPeriod() external onlyOwners() hasEnoughWorkers() hasEnoughInvestmentProposal() onlySubmissionPeriod() pausable() {
+    function openVotingPeriod() external pausable() onlySubmissionPeriod() onlyOwners() hasEnoughWorkers() hasEnoughInvestmentProposal() {
         actualPeriod = 2;
     }
 
-    function openNeutralPeriod() external onlyOwners() onlyVotingPeriod() requirementsForClosingPeriodFullfilled() pausable() {
-        actualPeriod = 0;
+    function openNeutralPeriod() external pausable() onlyVotingPeriod() onlyOwners() hasEnoughAuthorizations() {
         address winner = getWinnerProposal();
         emit Winner(proposalsAttributes[winner].name, proposalsAttributes[winner].maker, proposalsAttributes[winner].minRequiredInvestment);
-        finalOperations(winner);
+        finalTransactions(winner);
+        resetValues();
     }
 
     function getWinnerProposal() internal pausable() view returns (address) {
         address tempWinner = proposals[0];
         for (uint256 i = 0; i < proposalsAmount; i++) {
-            if (proposals[i].balance > tempWinner.balance) {
+            bool isWinner = proposalsAttributes[proposals[i]].totalVotes > proposalsAttributes[tempWinner].totalVotes;
+            if (proposals[i].balance > tempWinner.balance
+                || (proposals[i].balance == tempWinner.balance && isWinner)) {
                 tempWinner = proposals[i];
-            }
-            else if (proposals[i].balance == tempWinner.balance) {
-                if (proposalsAttributes[proposals[i]].totalVotes > proposalsAttributes[tempWinner].totalVotes) {
-                    tempWinner = proposals[i];
-                }
             }
         }
         return tempWinner;
     }
 
-    event Winner(string indexed name, address indexed maker, uint256 minRequiredInvestment); 
-
-    function finalOperations(address _winner) internal pausable() {
-        proposal memory winnerAttributes = proposalsAttributes[_winner];
+    function finalTransactions(address _winner) internal pausable() {
+        takeCut(_winner);
         uint256 winnerIndex;
-        takeCut(winnerAttributes.instance);
+        proposal memory winnerAttributes = proposalsAttributes[_winner];
         for (uint256 i = 0; i < proposalsAmount - 1; i++) {
             if (proposals[i] != _winner) {
+                takeCut(proposals[i]);
                 proposal memory attributes = proposalsAttributes[proposals[i]];
-                takeCut(attributes.instance);
-                attributes.instance.withdraw(_winner, proposals[i].balance);
+                attributes.instance.transferTo(_winner, proposals[i].balance);
                 attributes.instance.destroyContract();
                 delete proposalsAttributes[proposals[i]];
                 delete proposals[i];
-            }else{
+            }
+            else {
                 winnerIndex = i;
             }
         }
@@ -151,8 +166,18 @@ contract SmartInvestment is Proxy {
         delete proposals[winnerIndex];
     }
 
-    function takeCut(InvestmentProposal _proposal) internal pausable() {
-        uint256 cut = address(_proposal).balance / 10;
-        _proposal.withdraw(myAddress, cut);
+    function takeCut(address _address) internal pausable() {
+        proposal memory attributes = proposalsAttributes[_address];
+        uint256 amount = _address.balance / 10;
+        attributes.instance.transferTo(myAddress, amount);
     }
+
+    function resetValues() internal pausable() {
+        actualPeriod = 0;
+        proposalsAmount = 0;
+        proposalsTotalBalance = 0;
+        closeVotingPeriodVotesAmount = 0;
+        delete closeVotingPeriodVotes;
+    }
+
 }

@@ -21,7 +21,7 @@ contract InvestmentProposal {
         _;
     }
 
-    modifier isCorrect(address _address) {
+    modifier isValid(address _address) {
         require(_address != address(0), "Address is the zero address");
         _;
     }
@@ -30,23 +30,31 @@ contract InvestmentProposal {
         owner = msg.sender;
     }
 
-    function setOwner(address _newValue) external onlyOwner() isCorrect(_newValue) pausable() {
-        owner = _newValue;
+    function setOwner(address _address) external pausable() onlyOwner() isValid(_address) {
+        owner = _address;
     }
 
     function setPause(bool _newValue) external onlyOwner() {
 		pause = _newValue;
     }
 
-    function withdraw(address _address, uint256 _amount) external onlyOwner() hasEnoughBalance(_amount) pausable() {
+    function getBalance() external view pausable() onlyOwner() returns(uint256) {
+        return address(this).balance / 1e18;
+    }
+
+    function transferTo(address _address, uint256 _amount) external pausable() onlyOwner() hasEnoughBalance(_amount) {
         payable(_address).transfer(_amount);
+    }
+
+    function withdraw(uint256 _amount) external pausable() onlyOwner() hasEnoughBalance(_amount) {
+        payable(msg.sender).transfer(_amount);
     }
 
     receive() external payable { }
 
     fallback() external payable { }
 
-    function destroyContract() external onlyOwner() pausable() {
+    function destroyContract() external pausable() onlyOwner() {
         selfdestruct(payable(owner));
     }
 

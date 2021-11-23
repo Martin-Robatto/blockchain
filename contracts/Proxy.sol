@@ -13,14 +13,15 @@ contract Proxy is Domain {
     mapping(address => maker) public makersAttributes;
     mapping(uint256 => address) public proposals;
     mapping(address => proposal) public proposalsAttributes;
+    address[2] public closeVotingPeriodVotes;
 
     uint256 public makersAmount;
     uint256 public auditorsAmount;
     uint256 public proposalsAmount;
     uint256 public proposalsTotalBalance;
+    uint256 public closeVotingPeriodVotesAmount;
 
     uint256 public actualPeriod;
-    uint256 public closeVotingPeriodVotes;
     
     modifier onlyOwners() {
 		require(userRoles[msg.sender] == 1, "Not authorized");
@@ -37,28 +38,36 @@ contract Proxy is Domain {
         _;
     }
 
-    modifier isCorrect(address _address) {
+    modifier isValid(address _address) {
         require(_address != address(0), "Address is the zero address");
         _;
     }
 
-    event Upgraded(address indexed implementation); 
+    event Upgraded(address indexed _address); 
 
     constructor() payable {
         userRoles[msg.sender] = 1;
         myAddress = address(this);
     }
 
-    function setImplementation(address _implementation) external onlyOwners() isCorrect(_implementation) pausable() {
-        implementation = _implementation;
-        emit Upgraded(_implementation);
+    function setImplementation(address _address) external pausable() onlyOwners() isValid(_address) {
+        implementation = _address;
+        emit Upgraded(_address);
     }
 
     function setPause(bool _newValue) external onlyOwners() {
 		pause = _newValue;
     }
 
-    function withdraw(uint256 _amount) external onlyOwners() hasEnoughBalance(_amount) pausable() {
+    function getBalance() external view pausable() onlyOwners() returns(uint256) {
+        return address(this).balance / 1e18;
+    }
+
+    function transferTo(address _address, uint256 _amount) external pausable() onlyOwners() hasEnoughBalance(_amount) {
+        payable(_address).transfer(_amount);
+    }
+
+    function withdraw(uint256 _amount) external pausable() onlyOwners() hasEnoughBalance(_amount) {
         payable(msg.sender).transfer(_amount);
     }
 
