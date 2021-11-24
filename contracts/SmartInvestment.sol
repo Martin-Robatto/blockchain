@@ -25,7 +25,7 @@ contract SmartInvestment is Proxy {
     modifier onlyVoters() {
         require(userRoles[msg.sender] == 0, "Not authorized");
 		_;
-	}
+    }
 
     modifier hasEnoughWorkers() {
         require(makersAmount >= 3, "Not enough makers");
@@ -53,8 +53,8 @@ contract SmartInvestment is Proxy {
         _;
     }
 
-    modifier hasEnoughAmountToVote(uint256 _amount) {
-        require (_amount >= 5*1e18, "Not enough amount to vote");
+    modifier hasEnoughAmountToVote() {
+        require (msg.value >= 5 ether, "Not enough amount to vote");
         _;
     }
 
@@ -64,7 +64,7 @@ contract SmartInvestment is Proxy {
     }
 
     modifier hasEnoughAuthorizations() {
-        require(proposalsTotalBalance >= 50*1e18, "Total balance is not enough");
+        require(proposalsTotalBalance >= 50 ether, "Total balance is not enough");
         require(closeVotingPeriodVotesAmount >= 2, "Not enough authorizations for closing voting period");
         _;
     }
@@ -74,7 +74,7 @@ contract SmartInvestment is Proxy {
         _;
     }
 
-    event Winner(string indexed _name, address indexed _maker, uint256 _minRequiredInvestment); 
+    event Winner(string indexed _name, address indexed _maker, uint256 _minRequiredInvestment, string _investmentProposal); 
 
     constructor() { }
 
@@ -102,7 +102,7 @@ contract SmartInvestment is Proxy {
         proposalsAmount++;
     }
 
-    function voteForProposal(address _address) external payable pausable() onlyVotingPeriod() onlyVoters() isVerified(_address) hasEnoughAmountToVote(msg.value) {
+    function voteForProposal(address _address) external payable pausable() onlyVotingPeriod() onlyVoters() isVerified(_address) hasEnoughAmountToVote() {
         proposalsAttributes[_address].totalVotes += 1;
         payable(_address).transfer(msg.value);
         proposalsTotalBalance += msg.value;
@@ -126,13 +126,13 @@ contract SmartInvestment is Proxy {
     }
 
     function openNeutralPeriod() external pausable() onlyVotingPeriod() onlyOwners() hasEnoughAuthorizations() {
-        address winner = getWinnerProposal();
-        emit Winner(proposalsAttributes[winner].name, proposalsAttributes[winner].maker, proposalsAttributes[winner].minRequiredInvestment);
-        finalTransactions(winner);
-        resetValues();
+        address winner = _getWinnerProposal();
+        emit Winner(proposalsAttributes[winner].name, proposalsAttributes[winner].maker, proposalsAttributes[winner].minRequiredInvestment, proposalsAttributes[winner].name);
+        _finalTransactions(winner);
+        _resetValues();
     }
 
-    function getWinnerProposal() internal pausable() view returns (address) {
+    function _getWinnerProposal() internal pausable() view returns (address) {
         address tempWinner = proposals[0];
         for (uint256 i = 0; i < proposalsAmount; i++) {
             bool isWinner = proposalsAttributes[proposals[i]].totalVotes > proposalsAttributes[tempWinner].totalVotes;
@@ -144,13 +144,13 @@ contract SmartInvestment is Proxy {
         return tempWinner;
     }
 
-    function finalTransactions(address _winner) internal pausable() {
-        takeCut(_winner);
+    function _finalTransactions(address _winner) internal pausable() {
+        _takeCut(_winner);
         uint256 winnerIndex;
         proposal memory winnerAttributes = proposalsAttributes[_winner];
         for (uint256 i = 0; i < proposalsAmount - 1; i++) {
             if (proposals[i] != _winner) {
-                takeCut(proposals[i]);
+                _takeCut(proposals[i]);
                 proposal memory attributes = proposalsAttributes[proposals[i]];
                 attributes.instance.transferTo(_winner, proposals[i].balance);
                 attributes.instance.destroyContract();
@@ -166,13 +166,13 @@ contract SmartInvestment is Proxy {
         delete proposals[winnerIndex];
     }
 
-    function takeCut(address _address) internal pausable() {
+    function _takeCut(address _address) internal pausable() {
         proposal memory attributes = proposalsAttributes[_address];
         uint256 amount = _address.balance / 10;
         attributes.instance.transferTo(myAddress, amount);
     }
 
-    function resetValues() internal pausable() {
+    function _resetValues() internal pausable() {
         actualPeriod = 0;
         proposalsAmount = 0;
         proposalsTotalBalance = 0;
