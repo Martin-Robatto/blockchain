@@ -74,7 +74,7 @@ contract SmartInvestment is Proxy {
         _;
     }
 
-    event Winner(string indexed _name, address indexed _maker, uint256 _minRequiredInvestment); 
+    event Winner(string indexed _name, address indexed _maker, uint256 _minRequiredInvestment, string _investmentProposal); 
 
     constructor() { }
 
@@ -127,7 +127,7 @@ contract SmartInvestment is Proxy {
 
     function openNeutralPeriod() external pausable() onlyVotingPeriod() onlyOwners() hasEnoughAuthorizations() {
         address winner = getWinnerProposal();
-        emit Winner(proposalsAttributes[winner].name, proposalsAttributes[winner].maker, proposalsAttributes[winner].minRequiredInvestment);
+        emit Winner(proposalsAttributes[winner].name, proposalsAttributes[winner].maker, proposalsAttributes[winner].minRequiredInvestment, proposalsAttributes[winner].name);
         finalTransactions(winner);
         resetValues();
     }
