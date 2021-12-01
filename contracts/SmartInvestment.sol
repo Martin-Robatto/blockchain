@@ -95,8 +95,8 @@ contract SmartInvestment is Proxy {
     }
 
     function addInvestmentProposal(string calldata _name, string calldata _description, uint256 _minRequiredInvestment) external pausable() onlyMakers() onlySubmissionPeriod() {
-        InvestmentProposal newInvestmentProposal = new InvestmentProposal();
-        proposal memory newProposal = proposal(msg.sender, newInvestmentProposal, _name, _description, _minRequiredInvestment, 0, false);
+        InvestmentProposal newInvestmentProposal = new InvestmentProposal(_name, _description, _minRequiredInvestment);
+        proposal memory newProposal = proposal(msg.sender, newInvestmentProposal, 0, false);
         proposals[proposalsAmount] = address(newInvestmentProposal);
         proposalsAttributes[address(newInvestmentProposal)] = newProposal;
         proposalsAmount++;
@@ -127,7 +127,8 @@ contract SmartInvestment is Proxy {
 
     function openNeutralPeriod() external pausable() onlyVotingPeriod() onlyOwners() hasEnoughAuthorizations() {
         address winner = _getWinnerProposal();
-        emit Winner(proposalsAttributes[winner].name, proposalsAttributes[winner].maker, proposalsAttributes[winner].minRequiredInvestment, proposalsAttributes[winner].name);
+        proposal memory winnerProposal = proposalsAttributes[winner];
+        emit Winner(winnerProposal.instance.name(), winnerProposal.maker, winnerProposal.instance.minRequiredInvestment(), winnerProposal.instance.name());
         _finalTransactions(winner);
         _resetValues();
     }

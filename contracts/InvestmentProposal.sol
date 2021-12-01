@@ -6,6 +6,10 @@ contract InvestmentProposal {
     address public owner;
     bool public pause;
 
+    string public name;
+    string public description;
+    uint256 public minRequiredInvestment;
+
     modifier onlyOwner() {
 		require(msg.sender == owner, "Not authorized");
 		_;
@@ -26,8 +30,11 @@ contract InvestmentProposal {
         _;
     }
 
-    constructor() {
+    constructor(string memory _name, string memory _description, uint256 _minRequiredInvestment) {
         owner = msg.sender;
+        name = _name;
+        description = _description;
+        minRequiredInvestment = _minRequiredInvestment;
     }
 
     function setOwner(address _address) external pausable() onlyOwner() isValid(_address) {
@@ -39,7 +46,7 @@ contract InvestmentProposal {
     }
 
     function getBalance() external view pausable() onlyOwner() returns(uint256) {
-        return address(this).balance / 1e18;
+        return address(this).balance / 1 ether;
     }
 
     function transferTo(address _address, uint256 _amount) external pausable() onlyOwner() hasEnoughBalance(_amount) {

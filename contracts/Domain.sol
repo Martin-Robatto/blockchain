@@ -14,9 +14,6 @@ contract Domain {
     struct proposal {
         address maker;
         InvestmentProposal instance;
-        string name;
-        string description;
-        uint256 minRequiredInvestment;
         uint256 totalVotes;
         bool verified;
     }
