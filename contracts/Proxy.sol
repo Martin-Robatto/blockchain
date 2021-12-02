@@ -5,23 +5,26 @@ import "./Domain.sol";
 
 contract Proxy is Domain {
 
-    /*bytes32 private constant implementationPosition = bytes32(uint256(
-        keccak256('eip1967.proxy.implementation')) - 1
-    ));*/
-
     address public implementation;
+    address public myAddress;
     bool public pause;
 
-    mapping(address => uint256) public users;
+    mapping(address => uint256) public userRoles;
     mapping(address => maker) public makersAttributes;
-    uint256 makersAmount;
-    uint256 auditorsAmount;
-    mapping(address => investmentProposal) public proposals;
-    uint256 proposalsAmount;
-    uint256 period;
+    mapping(uint256 => address) public proposals;
+    mapping(address => proposal) public proposalsAttributes;
+    address[2] public closeVotingPeriodVotes;
+
+    uint256 public makersAmount;
+    uint256 public auditorsAmount;
+    uint256 public proposalsAmount;
+    uint256 public proposalsTotalBalance;
+    uint256 public closeVotingPeriodVotesAmount;
+
+    uint256 public actualPeriod;
     
     modifier onlyOwners() {
-		require(users[msg.sender] == 1, "Not authorized");
+		require(userRoles[msg.sender] == 1, "Not authorized");
 		_;
 	}
 
@@ -35,22 +38,36 @@ contract Proxy is Domain {
         _;
     }
 
-    event Upgraded(address indexed implementation); 
-
-    constructor() {
-        users[msg.sender] = 1;
+    modifier isValid(address _address) {
+        require(_address != address(0), "Address is the zero address");
+        _;
     }
 
-    function setImplementation(address _implementation) external onlyOwners() pausable() {
-        implementation = _implementation;
-        emit Upgraded(_implementation);
+    event Upgraded(address indexed _address); 
+
+    constructor() payable {
+        userRoles[msg.sender] = 1;
+        myAddress = address(this);
+    }
+
+    function setImplementation(address _address) external pausable() onlyOwners() isValid(_address) {
+        implementation = _address;
+        emit Upgraded(_address);
     }
 
     function setPause(bool _newValue) external onlyOwners() {
 		pause = _newValue;
     }
 
-    function withdraw(uint256 _amount) external onlyOwners() hasEnoughBalance(_amount) pausable() {
+    function getBalance() external view pausable() onlyOwners() returns(uint256) {
+        return address(this).balance / 1e18;
+    }
+
+    function transferTo(address _address, uint256 _amount) external pausable() onlyOwners() hasEnoughBalance(_amount) {
+        payable(_address).transfer(_amount);
+    }
+
+    function withdraw(uint256 _amount) external pausable() onlyOwners() hasEnoughBalance(_amount) {
         payable(msg.sender).transfer(_amount);
     }
 

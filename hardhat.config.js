@@ -17,10 +17,10 @@ module.exports = {
       },
 
       rinkeby: {
-        chainid:  1337,
-        url:      process.env.RINKEBY_URL,
-        accounts: [process.env.PRIVATE_KEY_R],
-        from:     process.env.ACCOUNT_ADDRESS_R
-    }
+            chainid:  1337,
+            url:      process.env.RINKEBY_URL,
+            accounts: [process.env.PRIVATE_KEY_R],
+            from:     process.env.ACCOUNT_ADDRESS_R
+      }
   }
 };

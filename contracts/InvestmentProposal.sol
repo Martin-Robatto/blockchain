@@ -6,17 +6,14 @@ contract InvestmentProposal {
     address public owner;
     bool public pause;
 
-    uint256 public votesAmount;
+    string public name;
+    string public description;
+    uint256 public minRequiredInvestment;
 
     modifier onlyOwner() {
 		require(msg.sender == owner, "Not authorized");
 		_;
 	}
-
-    modifier hasEnoughAmount(uint256 amount) {
-        require (amount >= 5, "Not enough amount to vote");
-        _;
-    }
 
     modifier pausable() {
 		require(!pause, "Contract is in Pause");
@@ -28,29 +25,35 @@ contract InvestmentProposal {
         _;
     }
 
-    modifier isCorrect(address _address) {
+    modifier isValid(address _address) {
         require(_address != address(0), "Address is the zero address");
         _;
     }
 
-    constructor() {
+    constructor(string memory _name, string memory _description, uint256 _minRequiredInvestment) {
         owner = msg.sender;
-        votesAmount = 0;
+        name = _name;
+        description = _description;
+        minRequiredInvestment = _minRequiredInvestment;
     }
 
-    function setOwner(address _newValue) external onlyOwner() isCorrect(_newValue) pausable() {
-        owner = _newValue;
-    }
-
-    function voteForProposal() external payable hasEnoughAmount(msg.value) pausable() {
-        votesAmount = votesAmount + 1;
+    function setOwner(address _address) external pausable() onlyOwner() isValid(_address) {
+        owner = _address;
     }
 
     function setPause(bool _newValue) external onlyOwner() {
 		pause = _newValue;
     }
 
-    function withdraw(uint256 _amount) external onlyOwner() hasEnoughBalance(_amount) pausable() {
+    function getBalance() external view pausable() onlyOwner() returns(uint256) {
+        return address(this).balance / 1 ether;
+    }
+
+    function transferTo(address _address, uint256 _amount) external pausable() onlyOwner() hasEnoughBalance(_amount) {
+        payable(_address).transfer(_amount);
+    }
+
+    function withdraw(uint256 _amount) external pausable() onlyOwner() hasEnoughBalance(_amount) {
         payable(msg.sender).transfer(_amount);
     }
 
@@ -58,7 +61,7 @@ contract InvestmentProposal {
 
     fallback() external payable { }
 
-    function destroyContract() external {
+    function destroyContract() external pausable() onlyOwner() {
         selfdestruct(payable(owner));
     }
 

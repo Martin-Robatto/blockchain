@@ -1,15 +1,36 @@
 const { ethers } = require("hardhat");
 
 async function main() {
-	console.log("deploy process started");
 	const deployer = await ethers.getSigner();
-    console.log("address: ", deployer.address);
-	console.log("deployer balance: ", ethers.utils.formatEther(await deployer.getBalance()));
-	const contractFactory = await ethers.getContractFactory("Test", deployer);
-	contractInstance = await contractFactory.deploy();
-    console.log("contract deployed to address: ", contractInstance.address);
-    console.log("deployer balance: ", ethers.utils.formatEther(await deployer.getBalance()));
-    console.log("deploy process finished");
+	console.log('\n\n');
+	console.log("=".repeat(30));
+	console.log("DEPLOY PROCESS STARTED");
+	console.log("=".repeat(30));
+	console.log('\n\n');
+    console.log("Deployer address: ", deployer.address);
+	console.log("Deployer initial balance: ", ethers.utils.formatEther(await deployer.getBalance()));
+	console.log('\n\n');
+	console.log("Deploying contract: Proxy...");
+	const proxyFactory = await ethers.getContractFactory("Proxy", deployer);
+	proxyInstance = await proxyFactory.deploy();
+    console.log("Proxy address: ", proxyInstance.address);
+	await proxyInstance.deployed();
+	console.log("");
+	console.log("Deploying contract: SmartInvestment...");
+	const smartInvestmentFactory = await ethers.getContractFactory("SmartInvestment", deployer);
+	smartInvestmentInstance = await smartInvestmentFactory.deploy();
+    console.log("SmartInvestment address: ", smartInvestmentInstance.address);
+	await smartInvestmentInstance.deployed();
+	console.log("");
+	console.log("Linking SmartInvestment and Proxy...");
+	await proxyInstance.setImplementation(smartInvestmentInstance.address);
+	console.log('\n\n');
+    console.log("Deployer final balance: ", ethers.utils.formatEther(await deployer.getBalance()));
+	console.log('\n\n');
+	console.log("=".repeat(30));
+	console.log("DEPLOY PROCESS FINISHED SUCCESSFULLY");
+	console.log("=".repeat(30));
+	console.log('\n\n');
 }
 
 main()
